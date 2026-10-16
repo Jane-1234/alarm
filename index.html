@@ -84,7 +84,7 @@ button{background:none;border:0;cursor:pointer}
 </head>
 <body>
 <main>
- <div class="bar"><span id="net"></span><button id="dimBtn">夜间模式</button></div>
+ <div class="bar"><span id="net"></span><span><button id="bkBtn">备份/同步</button> · <button id="dimBtn">夜间模式</button></span></div>
  <button class="arm" id="arm">点此启用闹钟（iPhone 必须点一次才能发声）</button>
  <section class="clock">
   <div class="time" id="time">--:--<small id="sec"></small></div>
@@ -123,6 +123,15 @@ button{background:none;border:0;cursor:pointer}
  <div class="btns"><button id="gCancel">取消</button><button class="p" id="gSave">保存</button></div>
 </div></div>
 
+<div class="sheet" id="bsheet"><div class="card">
+ <div class="row"><b>备份 / 多设备同步</b></div>
+ <div style="font-size:13px;color:var(--mu);line-height:1.5">在一台设备点「生成」再「复制」，把文字发到另一台设备（备忘录、微信、AirDrop 都行），在那边粘贴到下面的框里，点「导入」。</div>
+ <textarea id="bT" rows="6" style="width:100%;margin-top:10px;background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:10px;padding:8px;font-size:12px"></textarea>
+ <div class="row"><span>包含录音（文字会很长）</span><button class="sw" id="bR"></button></div>
+ <div class="btns"><button id="bGen">生成</button><button id="bCopy">复制</button></div>
+ <div class="btns"><button id="bClose">关闭</button><button class="p" id="bImp">导入（覆盖本机）</button></div>
+ <div id="bS" style="font-size:13px;color:var(--mu);min-height:18px;margin-top:8px"></div>
+</div></div>
 <div class="toast" id="toast"></div>
 <div class="ring" id="ring">
  <div class="rt" id="rt"></div><div class="rl" id="rl"></div>
@@ -223,6 +232,13 @@ function render(){const L=$('#list');L.innerHTML='';
 let cur=null,cd=[],cv=true;
 function chips(){const c=$('#fD');c.innerHTML='';[...WD].forEach((w,i)=>{const b=document.createElement('button');b.textContent=w;b.className=cd.includes(i)?'on':'';b.onclick=()=>{cd=cd.includes(i)?cd.filter(x=>x!=i):[...cd,i].sort();chips()};c.appendChild(b)})}
 function edit(a){cur=a;const n=a||{t:'07:00',label:'',days:[1,2,3,4,5],say:true,snd:'chime'};$('#fT').value=n.t;$('#fL').value=n.label;$('#fS').value=n.snd||'chime';$('#fG').value=n.lang||'en';$('#fGr').innerHTML='<option value="">未分组</option>'+groups.map(g=>'<option value="'+g.id+'">'+g.name.replace(/</g,'&lt;')+'</option>').join('');$('#fGr').value=n.g||'';cRec=n.rec||null;recUI();cd=n.days.slice();cv=n.say;$('#fV').className='sw'+(cv?' on':'');chips();$('#delBtn').style.display=a?'':'none';$('#sheet').classList.add('show')}
+let bR=0;
+$('#bkBtn').onclick=()=>{$('#bT').value='';$('#bS').textContent='';$('#bsheet').classList.add('show')};
+$('#bClose').onclick=()=>$('#bsheet').classList.remove('show');
+$('#bR').onclick=()=>{bR=!bR;$('#bR').className='sw'+(bR?' on':'')};
+$('#bGen').onclick=()=>{const d={v:1,alarms:alarms.map(a=>{const c={...a};if(!bR)delete c.rec;return c}),groups,muted};$('#bT').value='ALARMv1:'+btoa(unescape(encodeURIComponent(JSON.stringify(d))));$('#bS').textContent='已生成，请点「复制」'};
+$('#bCopy').onclick=async()=>{const t=$('#bT');if(!t.value){$('#bS').textContent='请先点「生成」';return}try{await navigator.clipboard.writeText(t.value);$('#bS').textContent='已复制 ✓'}catch(e){t.select();t.setSelectionRange(0,1e9);try{document.execCommand('copy');$('#bS').textContent='已复制 ✓'}catch(e2){$('#bS').textContent='请长按文字框，手动全选并复制'}}};
+$('#bImp').onclick=()=>{try{const x=$('#bT').value.trim();if(x.indexOf('ALARMv1:')!=0)throw 0;const d=JSON.parse(decodeURIComponent(escape(atob(x.slice(8)))));if(!Array.isArray(d.alarms))throw 0;alarms=d.alarms;groups=d.groups||[];muted=d.muted||[];save();saveG();store.set('muted',muted);render();cal();$('#next').textContent='';tick();$('#bS').textContent='导入成功 ✓（已覆盖本机）'}catch(e){$('#bS').textContent='导入失败：文字不完整或格式不对'}};
 $('#addBtn').onclick=()=>edit(null);
 let cg=null,gS=1,gV=1,gP=1,mr,chunks=[],cRec=null,recT;
 function gsw(){$('#gSn').className='sw'+(gS?' on':'');$('#gVb').className='sw'+(gV?' on':'');$('#gPp').className='sw'+(gP?' on':'')}
