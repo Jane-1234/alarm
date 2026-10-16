@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="闹钟">
+<title>新加坡万年历闹钟</title>
+<style>
+:root{--bg:#0f141b;--sf:#18202b;--ink:#e9e4d8;--mu:#8a93a0;--am:#f0b45a;--jd:#5fc4a0;--rd:#e5736a;--ln:#27313f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f3f1ec;--sf:#fff;--ink:#1d2430;--mu:#6b7380;--am:#a86300;--jd:#1f8a6a;--rd:#c4453b;--ln:#ddd8cc}}
+:root[data-theme="dark"]{--bg:#0f141b;--sf:#18202b;--ink:#e9e4d8;--mu:#8a93a0;--am:#f0b45a;--jd:#5fc4a0;--rd:#e5736a;--ln:#27313f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif;transition:filter .3s}
+body.dim{filter:brightness(.4)}
+main{max-width:520px;margin:0 auto;padding:16px 18px 40px}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+.bar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--mu)}
+.arm{width:100%;margin:10px 0 0;padding:12px;border-radius:12px;background:var(--am);color:#1a1405;font-weight:600;font-size:15px}
+.arm.ok{background:var(--sf);color:var(--jd);border:1px solid var(--ln);font-weight:500}
+.clock{text-align:center;padding:22px 0 8px}
+.time{font-size:78px;font-weight:200;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:var(--am);line-height:1}
+.time small{font-size:26px;color:var(--mu);margin-left:6px}
+.date{margin-top:10px;font-size:17px}
+.lun{margin-top:4px;color:var(--mu);font-size:15px}
+.next{text-align:center;font-size:14px;color:var(--mu);margin:6px 0 16px}
+.tabs{display:flex;border-bottom:1px solid var(--ln);margin-bottom:12px}
+.tabs button{flex:1;padding:10px;color:var(--mu);border-bottom:2px solid transparent;font-size:16px}
+.tabs button.on{color:var(--ink);border-color:var(--am)}
+.al{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid var(--ln)}
+.al .m{flex:1;min-width:0}
+.al .t{font-size:34px;font-weight:300;font-variant-numeric:tabular-nums}
+.al .d{font-size:13px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.al.off .t{color:var(--mu)}
+.sw{width:50px;height:30px;border-radius:15px;background:var(--ln);position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw.on{background:var(--jd)}.sw.on::after{transform:translateX(20px)}
+.add{display:block;width:100%;margin-top:14px;padding:12px;border:1px dashed var(--mu);border-radius:12px;color:var(--mu);font-size:15px}
+.empty{color:var(--mu);text-align:center;padding:24px 0}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-h b{font-size:18px;font-weight:500}
+.cal-h button{padding:6px 14px;color:var(--am);font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.grid .w{font-size:12px;color:var(--mu);padding:4px 0}
+.c{padding:6px 0 5px;border-radius:10px;min-height:54px}
+.c .n{font-size:17px;font-variant-numeric:tabular-nums}
+.c .s{font-size:9.5px;color:var(--mu);margin-top:1px;white-space:nowrap}
+.c.f .s{color:var(--rd)}
+.c.t{background:var(--am)}.c.t .n,.c.t .s{color:#1a1405}
+.c.we .n,.c.ph .n{color:var(--rd)}
+.c.t .n,.c.t .s{color:#1a1405}
+.c{position:relative;cursor:pointer}.c.mu{background:var(--ln)}.c.mu::after{content:"🔇";position:absolute;top:1px;right:2px;font-size:10px}.gm{font-size:12px;color:var(--mu);font-weight:400;margin-top:2px}.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--sf);border:1px solid var(--ln);padding:10px 16px;border-radius:12px;z-index:8;display:none;max-width:90%;font-size:14px}
+.gh{display:flex;align-items:center;gap:10px;padding:18px 4px 4px;font-size:14px}.gn{flex:1;font-weight:600}.gx{color:var(--am);font-size:14px;padding:4px 8px}.gh .sw{width:42px;height:26px}.gh .sw::after{width:20px;height:20px}.gh .sw.on::after{transform:translateX(16px)}.mini{padding:7px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--ln);font-size:14px;margin-left:4px}.adds{display:flex;gap:10px}.row select{max-width:60%}
+.hl{margin-top:14px;font-size:14px;color:var(--mu);line-height:1.6}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:5}
+.sheet.show{display:flex}
+.card{background:var(--sf);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}
+.row input[type=time]{font-size:34px;background:transparent;border:0;color:var(--am)}
+.row input[type=text]{flex:1;background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:10px;font-size:16px}
+.row select{background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px}
+.chips{display:flex;gap:6px;margin:12px 0}
+.chips button{flex:1;padding:9px 0;border-radius:10px;background:var(--bg);border:1px solid var(--ln)}
+.chips button.on{background:var(--am);color:#1a1405;border-color:var(--am)}
+.btns{display:flex;gap:10px;margin-top:16px}
+.btns button{flex:1;padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--ln)}
+.btns .p{background:var(--am);color:#1a1405;border-color:var(--am);font-weight:600}
+.btns .x{color:var(--rd)}
+.ring{position:fixed;inset:0;background:var(--bg);z-index:9;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px}
+.ring.show{display:flex}
+.ring .rt{font-size:84px;font-weight:200;color:var(--am);font-variant-numeric:tabular-nums}
+.ring .rl{font-size:26px;margin:14px 0 40px;line-height:1.4}
+.ring button{width:100%;max-width:320px;padding:18px;border-radius:16px;font-size:20px;margin:8px 0}
+.ring .stop{background:var(--am);color:#1a1405;font-weight:700}
+.ring .snz{background:var(--sf);border:1px solid var(--ln)}
+@media(prefers-reduced-motion:no-preference){.ring.show .rt{animation:p 1.2s ease-in-out infinite}}
+@keyframes p{50%{opacity:.45}}
+</style>
+</head>
+<body>
+<main>
+ <div class="bar"><span id="net"></span><button id="dimBtn">夜间模式</button></div>
+ <button class="arm" id="arm">点此启用闹钟（iPhone 必须点一次才能发声）</button>
+ <section class="clock">
+  <div class="time" id="time">--:--<small id="sec"></small></div>
+  <div class="date" id="date"></div>
+  <div class="lun" id="lun"></div>
+ </section>
+ <div class="next" id="next"></div>
+ <div class="tabs"><button class="on" data-p="a">闹钟</button><button data-p="c">日历</button></div>
+ <div id="pa"><div id="list"></div><div class="adds"><button class="add" id="addBtn">＋ 新建闹钟</button><button class="add" id="addGBtn">＋ 新建分组</button></div></div>
+ <div id="pc" hidden>
+  <div class="cal-h"><button id="pm">‹</button><b id="ct"></b><button id="nm">›</button></div>
+  <div class="grid" id="grid"></div>
+  <div class="hl" id="hl"></div>
+  <div class="hl">点一下日期，当天所有闹钟静音；再点一下取消。</div>
+ </div>
+</main>
+
+<div class="sheet" id="sheet"><div class="card">
+ <div class="row"><input type="time" id="fT"><select id="fS"><option value="chime">清晨钟声</option><option value="rise">渐强音阶</option><option value="beep">经典滴滴</option></select></div>
+ <div class="row"><input type="text" id="fL" placeholder="备注（只能写英文，响铃时用英文朗读）" maxlength="60"></div>
+ <div class="row"><span>分组</span><select id="fGr"></select></div>
+ <div class="row"><span id="rS"></span><span><button class="mini" id="rBtn">● 录音</button><button class="mini" id="rImp">导入</button><input type="file" id="rFile" hidden><button class="mini" id="rPlay">▶</button><button class="mini" id="rDel">✕</button></span></div>
+ <div class="chips" id="fD"></div>
+ <div class="row"><span>语音播报备注</span><button class="sw" id="fV"></button></div>
+ <select id="fG" hidden><option value="en">English</option></select>
+ <div class="btns"><button id="tryBtn">试听</button><button class="x" id="delBtn">删除</button></div>
+ <div class="btns"><button id="cancelBtn">取消</button><button class="p" id="saveBtn">保存</button></div>
+</div></div>
+
+<div class="sheet" id="gsheet"><div class="card">
+ <div class="row"><input type="text" id="gN" placeholder="分组名称" maxlength="30"></div>
+ <div class="row"><span>响铃与语音</span><button class="sw on" id="gSn"></button></div>
+ <div class="row"><span>震动（仅安卓有效）</span><button class="sw on" id="gVb"></button></div>
+ <div class="row"><span>屏幕弹窗</span><button class="sw on" id="gPp"></button></div>
+ <div class="btns"><button class="x" id="gDel">删除分组</button></div>
+ <div class="btns"><button id="gCancel">取消</button><button class="p" id="gSave">保存</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<div class="ring" id="ring">
+ <div class="rt" id="rt"></div><div class="rl" id="rl"></div>
+ <button class="stop" id="okBtn" style="display:none">知道了</button><button class="snz" id="snzBtn">稍后提醒（5 分钟）</button>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),p2=n=>String(n).padStart(2,'0'),WD=['日','一','二','三','四','五','六'];
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let alarms=store.get('alarms',[{id:1,t:'07:00',label:'Time to get up. Have a great day!',days:[1,2,3,4,5],on:true,say:true,snd:'chime'}]);
+const save=()=>store.set('alarms',alarms);
+let groups=store.get('groups',[]);const saveG=()=>store.set('groups',groups);const gOn=a=>{const g=groups.find(x=>x.id==a.g);return !g||g.on};
+const gm=a=>{const g=groups.find(x=>x.id==a.g);return g?{snd:g.snd!==false,vib:g.vib!==false,pop:g.pop!==false}:{snd:true,vib:false,pop:true}};
+let muted=store.get('muted',[]);const dk=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+let tt;function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',8000)}
+alarms.forEach(a=>{const o=a.label||'';a.label=o.replace(/[^\x00-\x7F]/g,'').trim()||(o?'Alarm':'');a.lang='en'});
+
+/* ---- 农历 / 节气 / 节日 ---- */
+const LF=new Intl.DateTimeFormat('zh-u-ca-chinese',{month:'long',day:'numeric'});
+function lunar(d){const s=LF.format(d),m=s.match(/^(.*?月)(.+)$/);return m?{m:m[1],d:m[2]}:{m:'',d:s}}
+const TN=['小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至'];
+const TC=[5.4055,20.12,3.87,18.73,5.63,20.646,4.81,20.1,5.52,21.04,5.678,21.37,7.108,22.83,7.5,23.13,7.646,23.042,8.318,23.438,7.438,22.36,7.18,21.94];
+function term(d){const y=d.getFullYear(),Y=y%100;for(let k=d.getMonth()*2;k<d.getMonth()*2+2;k++){let day=Math.floor(Y*.2422+TC[k])-Math.floor((k<4?Y-1:Y)/4);if(y==2026&&k==3)day--;if(y==2021&&k==23)day--;if(day==d.getDate())return TN[k]}return''}
+const SGH={'2026-1-1':'元旦','2026-2-17':'春节','2026-2-18':'春节','2026-3-21':'开斋节','2026-4-3':'受难日','2026-5-1':'劳动节','2026-5-27':'哈芝节','2026-5-31':'卫塞节','2026-6-1':'补假','2026-8-9':'国庆日','2026-8-10':'补假','2026-11-8':'屠妖节','2026-11-9':'补假','2026-12-25':'圣诞节','2027-1-1':'元旦','2027-2-6':'春节','2027-2-7':'春节','2027-2-8':'补假','2027-3-10':'开斋节','2027-3-26':'受难日','2027-5-1':'劳动节','2027-5-17':'哈芝节','2027-5-20':'卫塞节','2027-8-9':'国庆日','2027-10-28':'屠妖节','2027-12-25':'圣诞节'},SGF={'1-1':'元旦','5-1':'劳动节','8-9':'国庆日','12-25':'圣诞节'};
+const AB={'元旦':'New Year','春节':'CNY','开斋节':'Puasa','受难日':'Good Fri','劳动节':'Labour','哈芝节':'Haji','卫塞节':'Vesak','补假':'In lieu','国庆日':'Nat. Day','屠妖节':'屠妖节','圣诞节':'Xmas'};
+function sgNow(){try{return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Singapore'}))}catch(e){return new Date()}}
+function fest(d){const y=d.getFullYear(),m=d.getMonth()+1;if(y==2026||y==2027)return SGH[y+'-'+m+'-'+d.getDate()]||'';return SGF[m+'-'+d.getDate()]||''}
+const LFS={'正月初一':'春节','正月十五':'元宵','五月初五':'端午','八月十五':'中秋'};
+function cult(d){const l=lunar(d),f=LFS[l.m+l.d];if(f)return f;const n=new Date(d);n.setDate(n.getDate()+1);return lunar(n).m+lunar(n).d=='正月初一'?'除夕':''}
+
+
+/* ---- 声音与语音 ---- */
+let ac,armed=false,wl;
+function unlock(){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}}
+function tone(f,t,dur,v,ty){const o=ac.createOscillator(),g=ac.createGain();o.type=ty||'sine';o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+.05)}
+const SND={chime:t=>[523,659,784,1047,784,659].forEach((f,i)=>tone(f,t+i*.35,.9,.4)),
+ rise:t=>[392,440,494,523,587,659,698,784].forEach((f,i)=>tone(f,t+i*.3,.5,.15+i*.05,'triangle')),
+ beep:t=>{for(let i=0;i<4;i++)tone(1000,t+i*.25,.15,.35,'square')}};
+function say3(t,n,done,live){if(!('speechSynthesis' in window)){if(done)done();return}speechSynthesis.cancel();const v=enVoice();let f=0;const end=()=>{if(!f){f=1;if(done)done()}};for(let i=0;i<n;i++){const u=new SpeechSynthesisUtterance(String(t).replace(/[^\x00-\x7F]/g,''));u.lang='en-US';if(v){u.voice=v;u.lang=v.lang}u.rate=.95;if(i==n-1){u.onend=end;u.onerror=end}speechSynthesis.speak(u)}setTimeout(end,15000*n)}
+function enVoice(){try{const v=speechSynthesis.getVoices().filter(x=>/^en[-_]/i.test(x.lang));const q=x=>(/premium/i.test(x.name)?4:/enhanced/i.test(x.name)?3:/siri/i.test(x.name)?2:0)*10+(/en[-_]SG/i.test(x.lang)?3:/en[-_]GB/i.test(x.lang)?2:/en[-_]US/i.test(x.lang)?1:0);return v.sort((a,b)=>q(b)-q(a))[0]}catch(e){}}
+let cs;const bufC=new Map();
+function dec(u){return bufC.has(u)?Promise.resolve(bufC.get(u)):new Promise((ok,no)=>{const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);ac.decodeAudioData(a.buffer,x=>{bufC.set(u,x);ok(x)},no)})}
+function playRec(u,n,done,live){unlock();dec(u).then(b=>{if(live&&!ringing){return}const t0=ac.currentTime+.05;cs=[];for(let i=0;i<n;i++){const s=ac.createBufferSource();s.buffer=b;s.connect(ac.destination);if(i==n-1)s.onended=()=>{if(done)done()};s.start(t0+i*(b.duration+.6));cs.push(s)}}).catch(()=>{if(done)done()})}
+function speak(txt,done,lang){if(!('speechSynthesis' in window)){done&&done();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(txt).replace(/[^\x00-\x7F]/g,''));u.lang='en-US';const v=enVoice();if(v){u.voice=v;u.lang=v.lang}u.rate=.95;let f=0;const e=()=>{if(!f){f=1;done&&done()}};u.onend=e;u.onerror=e;setTimeout(e,15000);speechSynthesis.speak(u)}
+async function wake(){try{if(navigator.wakeLock&&armed)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(armed){unlock();keepAlive()}tick()}});
+$('#arm').onclick=()=>{unlock();if(ac)SND.beep.length&&tone(440,ac.currentTime,.1,.05);try{speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}armed=true;wake();keepAlive();
+ $('#arm').className='arm ok';$('#arm').textContent='✓ 闹钟已就绪 · 保持本页打开并接上充电器'};
+
+/* ---- 响铃 ---- */
+let ringing=null,rtm,snoozes=[];
+const lg=()=>'en';
+function sayTime(d,g){if(g=='en'){const h=d.getHours()%12||12,m=d.getMinutes();return "It's "+h+(m?':'+p2(m):'')+(d.getHours()<12?' AM. ':' PM. ')}return '现在是'+d.getHours()+'点'+(d.getMinutes()?d.getMinutes()+'分':'整')+'。'}
+function cycle(){if(!ringing)return;unlock();const a=ringing,m=gm(a);if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600,300,600]);if(!m.snd)return;if(ac)SND[a.snd||'chime'](ac.currentTime+.05);
+ rtm=setTimeout(()=>{if(ringing!==a)return;const fin=()=>{rtm=setTimeout(()=>{if(ringing===a)stopRing()},800)};if(a.say&&a.rec)playRec(a.rec,2,fin,1);else if(a.say&&a.label)say3(a.label,2,fin,1);else fin()},2800)}
+function ring(a){if(ringing)return;const m=gm(a),lb=a.label||'闹钟时间到';
+ if(!m.snd&&!m.pop){if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600]);toast(lb+' · '+a.t);return}
+ ringing=a;$('#rl').textContent=lb;$('#okBtn').style.display=m.snd?'none':'';if(m.pop)$('#ring').classList.add('show');else toast(lb+' · '+a.t);if(!m.snd)rtm=setTimeout(stopRing,600000);cycle()}
+function stopRing(){ringing=null;clearTimeout(rtm);try{(cs||[]).forEach(x=>{try{x.stop()}catch(e){}})}catch(e){}try{speechSynthesis.cancel()}catch(e){}$('#ring').classList.remove('show')}
+
+$('#okBtn').onclick=stopRing;
+$('#snzBtn').onclick=()=>{const a=ringing;stopRing();snoozes.push({ts:Date.now()+300000,a})};
+
+/* ---- 时钟主循环 ---- */
+const fired=new Map();let lastT=0;
+function due(a,n){if(a.t===p2(n.getHours())+':'+p2(n.getMinutes()))return true;if(!lastT||n-lastT<5000)return false;const[h,m]=a.t.split(':'),t=new Date(n);t.setHours(+h,+m,0,0);return t>lastT&&t<=n&&n-t<1800000}
+function silentWav(){const n=8000,b=new Uint8Array(44+n),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,'data');v.setUint32(40,n,true);b.fill(128,44);let s='';b.forEach(x=>s+=String.fromCharCode(x));return 'data:audio/wav;base64,'+btoa(s)}
+let ka;function keepAlive(){try{if(!ka){ka=new Audio(silentWav());ka.loop=true;ka.setAttribute('playsinline','')}ka.play().catch(()=>{});if(navigator.mediaSession)navigator.mediaSession.metadata=new MediaMetadata({title:'闹钟运行中',artist:'新加坡万年历闹钟'})}catch(e){}}
+function repText(a){const d=a.days;if(!d.length)return'仅一次';if(d.length==7)return'每天';if(d.join()=='1,2,3,4,5')return'工作日';if(d.join()=='0,6')return'周末';return'周'+d.map(i=>WD[i]).join('、')}
+function nextAlarm(now){let best=null;alarms.filter(a=>a.on&&gOn(a)).forEach(a=>{for(let i=0;i<8;i++){const d=new Date(now);d.setDate(d.getDate()+i);const[h,m]=a.t.split(':');d.setHours(+h,+m,0,0);if(d<=now)continue;if(a.days.length&&!a.days.includes(d.getDay()))continue;if(muted.includes(dk(d)))continue;if(!best||d<best.d)best={d,a};break}});return best}
+function tick(){const n=sgNow(),hm=p2(n.getHours())+':'+p2(n.getMinutes());
+ $('#time').firstChild.nodeValue=hm;$('#sec').textContent=p2(n.getSeconds());
+ const f=fest(n);
+ $('#date').textContent=n.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+ $('#lun').textContent=(f?'新加坡公共假期 · '+f:'新加坡时间（SGT）')+(muted.includes(dk(n))?' · 今天闹钟已静音':'');
+ const key=n.toDateString()+hm;
+ alarms.forEach(a=>{if(a.on&&gOn(a)&&!muted.includes(dk(n))&&due(a,n)&&(!a.days.length||a.days.includes(n.getDay()))&&fired.get(a.id)!==key){fired.set(a.id,key);if(!a.days.length){a.on=false;save();render()}ring(a)}});
+ lastT=n;snoozes=snoozes.filter(s=>{if(Date.now()>=s.ts){ring(s.a);return false}return true});
+ if(ringing)$('#rt').textContent=hm;
+ if(n.getSeconds()%10==0||!$('#next').textContent){const x=nextAlarm(n);if(!x)$('#next').textContent='没有开启的闹钟';else{const mins=Math.round((x.d-n)/60000),h=Math.floor(mins/60);$('#next').textContent='下一个闹钟 '+p2(x.d.getHours())+':'+p2(x.d.getMinutes())+' · '+(h?h+' 小时 ':'')+(mins%60)+' 分钟后'}}
+}
+function net(){$('#net').textContent=navigator.onLine?'● 已联网':'● 离线中，闹钟照常工作'}
+addEventListener('online',net);addEventListener('offline',net);net();
+
+/* ---- 闹钟列表 ---- */
+function row(a){const r=document.createElement('div');r.className='al'+(a.on&&gOn(a)?'':' off');
+ r.innerHTML='<div class="m"><div class="t">'+a.t+'</div><div class="d"></div></div><button class="sw'+(a.on?' on':'')+'" aria-label="Toggle"></button>';
+ r.querySelector('.d').textContent=repText(a)+(a.label?' · '+a.label:'')+(a.rec?' · 🎙':a.say?' · 🔊':'');
+ r.querySelector('.m').onclick=()=>edit(a);
+ r.querySelector('.sw').onclick=()=>{a.on=!a.on;save();render();tick()};return r}
+function render(){const L=$('#list');L.innerHTML='';
+ const sec=(g,items)=>{if(g){const h=document.createElement('div');h.className='gh';h.innerHTML='<div class="gn"><div class="gt"></div><div class="gm"></div></div><button class="gx">编辑</button><button class="sw'+(g.on?' on':'')+'" aria-label="Toggle group"></button>';h.querySelector('.gt').textContent=g.name+' ('+items.length+')';h.querySelector('.gm').textContent=[g.snd!==false&&'语音',g.vib!==false&&'震动',g.pop!==false&&'弹窗'].filter(Boolean).join(' + ')||'静音';h.querySelector('.gx').onclick=()=>gedit(g);h.querySelector('.sw').onclick=()=>{g.on=!g.on;saveG();render();tick()};L.appendChild(h)}
+  else if(groups.length&&items.length){const h=document.createElement('div');h.className='gh';h.innerHTML='<div class="gn">未分组</div>';L.appendChild(h)}
+  items.slice().sort((a,b)=>a.t.localeCompare(b.t)).forEach(a=>L.appendChild(row(a)))};
+ groups.forEach(g=>sec(g,alarms.filter(a=>a.g==g.id)));
+ sec(null,alarms.filter(a=>!groups.some(g=>g.id==a.g)));
+ if(!alarms.length&&!groups.length)L.innerHTML='<div class="empty">还没有闹钟，点下面新建一个</div>'}
+let cur=null,cd=[],cv=true;
+function chips(){const c=$('#fD');c.innerHTML='';[...WD].forEach((w,i)=>{const b=document.createElement('button');b.textContent=w;b.className=cd.includes(i)?'on':'';b.onclick=()=>{cd=cd.includes(i)?cd.filter(x=>x!=i):[...cd,i].sort();chips()};c.appendChild(b)})}
+function edit(a){cur=a;const n=a||{t:'07:00',label:'',days:[1,2,3,4,5],say:true,snd:'chime'};$('#fT').value=n.t;$('#fL').value=n.label;$('#fS').value=n.snd||'chime';$('#fG').value=n.lang||'en';$('#fGr').innerHTML='<option value="">未分组</option>'+groups.map(g=>'<option value="'+g.id+'">'+g.name.replace(/</g,'&lt;')+'</option>').join('');$('#fGr').value=n.g||'';cRec=n.rec||null;recUI();cd=n.days.slice();cv=n.say;$('#fV').className='sw'+(cv?' on':'');chips();$('#delBtn').style.display=a?'':'none';$('#sheet').classList.add('show')}
+$('#addBtn').onclick=()=>edit(null);
+let cg=null,gS=1,gV=1,gP=1,mr,chunks=[],cRec=null,recT;
+function gsw(){$('#gSn').className='sw'+(gS?' on':'');$('#gVb').className='sw'+(gV?' on':'');$('#gPp').className='sw'+(gP?' on':'')}
+$('#gSn').onclick=()=>{gS=!gS;gsw()};$('#gVb').onclick=()=>{gV=!gV;gsw()};$('#gPp').onclick=()=>{gP=!gP;gsw()};
+function gedit(g){cg=g;gS=g?g.snd!==false:true;gV=g?g.vib!==false:true;gP=g?g.pop!==false:true;gsw();$('#gN').value=g?g.name:'';$('#gDel').style.display=g?'':'none';$('#gsheet').classList.add('show')}
+$('#addGBtn').onclick=()=>gedit(null);
+$('#gCancel').onclick=()=>$('#gsheet').classList.remove('show');
+$('#gSave').onclick=()=>{const n=$('#gN').value.trim();if(!n)return;const o={snd:!!gS,vib:!!gV,pop:!!gP};if(cg){cg.name=n;Object.assign(cg,o)}else groups.push({id:Date.now(),name:n,on:true,...o});saveG();render();tick();$('#gsheet').classList.remove('show')};
+$('#gDel').onclick=()=>{alarms.forEach(a=>{if(a.g==cg.id)a.g=null});groups=groups.filter(x=>x!==cg);save();saveG();render();tick();$('#gsheet').classList.remove('show')};
+function recUI(){$('#rS').textContent=cRec?'已录制你的声音 ✓':'用自己的声音（可选）';$('#rDel').style.display=cRec?'':'none';$('#rPlay').style.display=cRec?'':'none'}
+$('#rImp').onclick=()=>$('#rFile').click();
+$('#rFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(f.size>1500000){$('#rS').textContent='文件太大（请小于 1.5 MB，约 1 分钟内）';return}const fr=new FileReader();fr.onload=()=>{const u=fr.result;unlock();dec(u).then(()=>{cRec=u;recUI()}).catch(()=>{$('#rS').textContent='无法识别这个文件（请选 m4a、mp3、wav 等音频）'})};fr.readAsDataURL(f)};
+$('#rDel').onclick=()=>{cRec=null;recUI()};
+$('#rPlay').onclick=()=>{unlock();if(cRec)playRec(cRec,1)};
+$('#rBtn').onclick=async()=>{if(mr&&mr.state=='recording'){mr.stop();return}
+ try{const st=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];const mt=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'';mr=mt?new MediaRecorder(st,{mimeType:mt}):new MediaRecorder(st);
+  mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearTimeout(recT);$('#rBtn').textContent='● 录音';const fr=new FileReader();fr.onload=()=>{cRec=fr.result;recUI()};fr.readAsDataURL(new Blob(chunks,{type:mr.mimeType}))};
+  mr.start();$('#rBtn').textContent='■ 停止';$('#rS').textContent='录音中…（最长 15 秒）';recT=setTimeout(()=>{if(mr.state=='recording')mr.stop()},15000)}
+ catch(e){$('#rS').textContent='此页面无法使用麦克风，请点「导入」选录音文件'}};
+$('#cancelBtn').onclick=()=>$('#sheet').classList.remove('show');
+$('#fV').onclick=()=>{cv=!cv;$('#fV').className='sw'+(cv?' on':'')};
+$('#tryBtn').onclick=()=>{unlock();if(ac)SND[$('#fS').value](ac.currentTime+.05);if(cv&&(cRec||$('#fL').value))setTimeout(()=>cRec?playRec(cRec,2):say3($('#fL').value,2),2600)};
+$('#saveBtn').onclick=()=>{const o={t:$('#fT').value||'07:00',label:$('#fL').value.replace(/[^\x00-\x7F]/g,'').trim(),days:cd,say:cv,snd:$('#fS').value,lang:$('#fG').value,g:$('#fGr').value?+$('#fGr').value:null,rec:cRec,on:true};
+ if(cur)Object.assign(cur,o);else alarms.push({id:Date.now(),...o});save();render();tick();$('#sheet').classList.remove('show')};
+$('#delBtn').onclick=()=>{alarms=alarms.filter(x=>x!==cur);save();render();tick();$('#sheet').classList.remove('show')};
+
+/* ---- 万年历 ---- */
+let vy,vm;{const n=sgNow();vy=n.getFullYear();vm=n.getMonth()}
+function cal(){$('#ct').textContent=vy+'年'+(vm+1)+'月';const g=$('#grid'),hl=[];g.innerHTML='';[...WD].forEach(w=>{const e=document.createElement('div');e.className='w';e.textContent=w;g.appendChild(e)});
+ const first=new Date(vy,vm,1).getDay(),days=new Date(vy,vm+1,0).getDate(),now=sgNow();
+ for(let i=0;i<first;i++)g.appendChild(document.createElement('div'));
+ for(let d=1;d<=days;d++){const dt=new Date(vy,vm,d),h=fest(dt),e=document.createElement('div');if(h)hl.push(d+'日 '+h);
+  e.className='c'+(h?' f ph':'')+(dt.getDay()%6==0?' we':'')+(dt.toDateString()==now.toDateString()?' t':'');
+  if(muted.includes(dk(dt)))e.className+=' mu';e.onclick=()=>{const k=dk(dt),i=muted.indexOf(k);if(i<0)muted.push(k);else muted.splice(i,1);store.set('muted',muted);cal();$('#next').textContent='';tick()};
+  e.innerHTML='<div class="n">'+d+'</div><div class="s"></div>';e.querySelector('.s').textContent=h;g.appendChild(e)}$('#hl').textContent=hl.length?'本月新加坡公共假期：'+hl.join('、'):'本月没有公共假期'}
+$('#pm').onclick=()=>{vm--;if(vm<0){vm=11;vy--}cal()};$('#nm').onclick=()=>{vm++;if(vm>11){vm=0;vy++}cal()};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x==b));$('#pa').hidden=b.dataset.p!='a';$('#pc').hidden=b.dataset.p!='c'});
+$('#dimBtn').onclick=()=>{document.body.classList.toggle('dim');$('#dimBtn').textContent=document.body.classList.contains('dim')?'关闭夜间模式':'夜间模式'};
+
+$('#fL').oninput=e=>{e.target.value=e.target.value.replace(/[^\x00-\x7F]/g,'')};render();cal();tick();setInterval(tick,500);
+</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
+</body>
+</html>
