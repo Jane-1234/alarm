@@ -101,7 +101,8 @@ button{background:none;border:0;cursor:pointer}
   <div class="hl" id="hl"></div>
   <div class="hl">点一下日期，当天所有闹钟静音；再点一下取消。</div>
  </div>
-<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v6 · 云端英文语音</div>
+<details style="margin-top:24px;font-size:12px;color:var(--mu)"><summary>运行记录（排查用）</summary><pre id="logbox" style="white-space:pre-wrap;margin:8px 0 0"></pre></details>
+<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v7 · 含运行记录</div>
 </main>
 
 <div class="sheet" id="sheet"><div class="card">
@@ -139,6 +140,8 @@ let groups=store.get('groups',[]);const saveG=()=>store.set('groups',groups);con
 const gm=a=>{const g=groups.find(x=>x.id==a.g);return g?{snd:g.snd!==false,vib:g.vib!==false,pop:g.pop!==false}:{snd:true,vib:false,pop:true}};
 let muted=store.get('muted',[]);const dk=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
 let tt;function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',8000)}
+let LOGS=store.get('logs',[]);function showLogs(){const e=$('#logbox');if(e)e.textContent=LOGS.slice().reverse().join('\n')}
+function lg2(m){const n=sgNow();LOGS.push(p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds())+' '+m);if(LOGS.length>14)LOGS.shift();store.set('logs',LOGS);showLogs()}
 alarms.forEach(a=>{const o=a.label||'';a.label=o.replace(/[^\x00-\x7F]/g,'').trim()||(o?'Alarm':'');a.lang='en'});
 
 /* ---- 农历 / 节气 / 节日 ---- */
@@ -162,7 +165,15 @@ function tone(f,t,dur,v,ty){const o=ac.createOscillator(),g=ac.createGain();o.ty
 const SND={chime:t=>[523,659,784,1047,784,659].forEach((f,i)=>tone(f,t+i*.35,.9,.4)),
  rise:t=>[392,440,494,523,587,659,698,784].forEach((f,i)=>tone(f,t+i*.3,.5,.15+i*.05,'triangle')),
  beep:t=>{for(let i=0;i<4;i++)tone(1000,t+i*.25,.15,.35,'square')}};
-function dbg(t){const e=$('#rdbg');if(e)e.textContent=t}
+const WAVC={};
+function mkWav(kind){if(WAVC[kind])return WAVC[kind];const C={chime:[[523,659,784,1047,784,659],.35,.9],rise:[[392,440,494,523,587,659,698,784],.3,.5],beep:[[1000,1000,1000,1000],.25,.15]}[kind]||[[523,659],.35,.9],fs=C[0],step=C[1],dur=C[2],sr=16000,N=Math.ceil(sr*(step*(fs.length-1)+dur+.1)),d=new Int16Array(N);
+ fs.forEach((f,i)=>{const s0=Math.floor(i*step*sr),n=Math.floor(dur*sr);for(let k=0;k<n&&s0+k<N;k++){const t=k/sr,env=Math.min(1,t/.02)*Math.exp(-4*t/dur);d[s0+k]=Math.max(-32767,Math.min(32767,d[s0+k]+Math.round(Math.sin(2*Math.PI*f*t)*env*.45*32767)))}});
+ const b=new Uint8Array(44+N*2),v=new DataView(b.buffer),w=(o,x)=>{for(let i=0;i<x.length;i++)b[o+i]=x.charCodeAt(i)};w(0,'RIFF');v.setUint32(4,36+N*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,N*2,true);for(let i=0;i<N;i++)v.setInt16(44+i*2,d[i],true);
+ let x='';for(let i=0;i<b.length;i+=8192)x+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return WAVC[kind]='data:audio/wav;base64,'+btoa(x)}
+function playTone(kind){let via='ac';try{unlock();if(!(ac&&ac.state==='running'))via='el';else SND[kind](ac.currentTime+.05)}catch(e){via='el'}
+ if(via==='el'){if(ka){try{ka.loop=false;ka.src=mkWav(kind);ka.onended=()=>{ka.onended=null;ka.loop=true;ka.src=SIL;ka.play().catch(()=>{})};ka.play().catch(e=>lg2('铃声播放被拒绝：'+e.name))}catch(e){lg2('铃声出错')}}else lg2('铃声：没有可用的播放器（未点启用闹钟？）')}
+ lg2('铃声方式：'+(via=='ac'?'音频引擎':'播放器')+'（ac='+(ac?ac.state:'无')+'）')}
+function dbg(t){const e=$('#rdbg');if(e)e.textContent=t;lg2(t)}
 function say3(t,n,done,live){dbg('语音：准备播放…');if(!('speechSynthesis' in window)){toast('此浏览器不支持语音朗读');if(done)done();return}const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}let f=0,st=0;const end=()=>{if(!f){f=1;if(done)done()}};const go=useV=>{const v=useV?enVoice():null;for(let i=0;i<n;i++){const u=new SpeechSynthesisUtterance(txt);u.lang=v?v.lang:'en-US';if(v)u.voice=v;u.rate=.95;u.onstart=()=>{st=1;dbg('语音：正在播放（'+(v?v.name:'默认声音')+'）')};if(i==n-1){u.onend=end;u.onerror=ev=>{dbg('语音出错：'+((ev&&ev.error)||'未知'));if(!st&&useV&&!f&&(!live||ringing)&&!(ev&&/cancel|interrupt/.test(ev.error||''))){try{speechSynthesis.cancel()}catch(e){}go(0)}else end()}}speechSynthesis.speak(u)}};go(1);setTimeout(()=>{if(!st&&!f)dbg('语音没有响起');if(!st&&!f)toast('语音没有响起：请确认已点「启用闹钟」、手机没有静音、已下载英文语音')},4000);setTimeout(end,15000*n)}
 const SIL=silentWav();
 let cWd;
@@ -185,17 +196,17 @@ function speakNote(t,n,done,live){const txt=String(t).replace(/[^\x00-\x7F]/g,''
 function enVoice(){try{const v=speechSynthesis.getVoices().filter(x=>/^en[-_]/i.test(x.lang));const q=x=>(/premium/i.test(x.name)?4:/enhanced/i.test(x.name)?3:/siri/i.test(x.name)?2:0)*10+(/en[-_]SG/i.test(x.lang)?3:/en[-_]GB/i.test(x.lang)?2:/en[-_]US/i.test(x.lang)?1:0);return v.sort((a,b)=>q(b)-q(a))[0]}catch(e){}}
 function speak(txt,done,lang){if(!('speechSynthesis' in window)){done&&done();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(txt).replace(/[^\x00-\x7F]/g,''));u.lang='en-US';const v=enVoice();if(v){u.voice=v;u.lang=v.lang}u.rate=.95;let f=0;const e=()=>{if(!f){f=1;done&&done()}};u.onend=e;u.onerror=e;setTimeout(e,15000);speechSynthesis.speak(u)}
 async function wake(){try{if(navigator.wakeLock&&armed)wl=await navigator.wakeLock.request('screen')}catch(e){}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(armed){unlock();keepAlive()}tick()}});
-$('#arm').onclick=()=>{unlock();if(ac)SND.beep.length&&tone(440,ac.currentTime,.1,.05);try{speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}armed=true;wake();keepAlive();
+document.addEventListener('visibilitychange',()=>{lg2(document.visibilityState==='visible'?'页面回到前台':'页面进入后台');if(document.visibilityState==='visible'){wake();if(armed){unlock();keepAlive()}tick()}});
+$('#arm').onclick=()=>{unlock();if(ac)SND.beep.length&&tone(440,ac.currentTime,.1,.05);try{speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}armed=true;wake();keepAlive();lg2('已点「启用闹钟」');
  $('#arm').className='arm ok';$('#arm').textContent='✓ 闹钟已就绪 · 保持本页打开并接上充电器'};
 
 /* ---- 响铃 ---- */
 let ringing=null,rtm,snoozes=[];
 const lg=()=>'en';
 function sayTime(d,g){if(g=='en'){const h=d.getHours()%12||12,m=d.getMinutes();return "It's "+h+(m?':'+p2(m):'')+(d.getHours()<12?' AM. ':' PM. ')}return '现在是'+d.getHours()+'点'+(d.getMinutes()?d.getMinutes()+'分':'整')+'。'}
-function cycle(){if(!ringing)return;unlock();const a=ringing,m=gm(a);if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600,300,600]);if(!m.snd)return;if(ac)SND[a.snd||'chime'](ac.currentTime+.05);
+function cycle(){if(!ringing)return;unlock();const a=ringing,m=gm(a);if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600,300,600]);if(!m.snd)return;playTone(a.snd||'chime');
  rtm=setTimeout(()=>{if(ringing!==a)return;const fin=()=>{rtm=setTimeout(()=>{if(ringing===a)stopRing()},800)};if(a.say&&a.label)speakNote(a.label,2,fin,1);else fin()},2800)}
-function ring(a){if(ringing)return;const m=gm(a),lb=a.label||'闹钟时间到';
+function ring(a){if(ringing)return;const m=gm(a),lb=a.label||'闹钟时间到';lg2('闹钟触发：'+lb+'（armed='+armed+'，ac='+(ac?ac.state:'无')+'，ka='+(ka?(ka.paused?'暂停':'播放'):'无')+'）');if(armed)keepAlive();
  if(!m.snd&&!m.pop){if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600]);toast(lb+' · '+a.t);return}
  if(!armed)toast('请先点「启用闹钟」，否则 iPhone 可能不发声');else if(m.snd&&a.say&&!a.label)toast('这个闹钟没有英文备注，所以没有语音');ringing=a;$('#rl').textContent=lb;$('#okBtn').style.display=m.snd?'none':'';if(m.pop)$('#ring').classList.add('show');else toast(lb+' · '+a.t);if(!m.snd)rtm=setTimeout(stopRing,600000);cycle()}
 function stopRing(){ringing=null;clearTimeout(rtm);cloudStop();try{speechSynthesis.cancel()}catch(e){}$('#ring').classList.remove('show')}
@@ -210,7 +221,7 @@ function silentWav(){const n=8000,b=new Uint8Array(44+n),v=new DataView(b.buffer
 let ka;function keepAlive(){try{if(!ka){ka=new Audio(silentWav());ka.loop=true;ka.setAttribute('playsinline','')}ka.play().catch(()=>{});if(navigator.mediaSession)navigator.mediaSession.metadata=new MediaMetadata({title:'闹钟运行中',artist:'新加坡万年历闹钟'})}catch(e){}}
 function repText(a){const d=a.days;if(!d.length)return'仅一次';if(d.length==7)return'每天';if(d.join()=='1,2,3,4,5')return'工作日';if(d.join()=='0,6')return'周末';return'周'+d.map(i=>WD[i]).join('、')}
 function nextAlarm(now){let best=null;alarms.filter(a=>a.on&&gOn(a)).forEach(a=>{for(let i=0;i<8;i++){const d=new Date(now);d.setDate(d.getDate()+i);const[h,m]=a.t.split(':');d.setHours(+h,+m,0,0);if(d<=now)continue;if(a.days.length&&!a.days.includes(d.getDay()))continue;if(muted.includes(dk(d)))continue;if(!best||d<best.d)best={d,a};break}});return best}
-function tick(){const n=sgNow(),hm=p2(n.getHours())+':'+p2(n.getMinutes());
+let lastTk=0;function tick(){const _t=Date.now();if(lastTk&&_t-lastTk>5000)lg2('页面曾暂停约 '+Math.round((_t-lastTk)/1000)+' 秒（被系统冻结）');lastTk=_t;const n=sgNow(),hm=p2(n.getHours())+':'+p2(n.getMinutes());
  $('#time').firstChild.nodeValue=hm;$('#sec').textContent=p2(n.getSeconds());
  const f=fest(n);
  $('#date').textContent=n.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
@@ -269,7 +280,7 @@ $('#pm').onclick=()=>{vm--;if(vm<0){vm=11;vy--}cal()};$('#nm').onclick=()=>{vm++
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x==b));$('#pa').hidden=b.dataset.p!='a';$('#pc').hidden=b.dataset.p!='c'});
 $('#dimBtn').onclick=()=>{document.body.classList.toggle('dim');$('#dimBtn').textContent=document.body.classList.contains('dim')?'关闭夜间模式':'夜间模式'};
 
-$('#fL').oninput=e=>{e.target.value=e.target.value.replace(/[^\x00-\x7F]/g,'')};render();cal();tick();setInterval(tick,500);
+$('#fL').oninput=e=>{e.target.value=e.target.value.replace(/[^\x00-\x7F]/g,'')};render();cal();showLogs();tick();setInterval(tick,500);
 </script>
 <script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
 </body>
