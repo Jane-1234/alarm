@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-title" content="闹钟">
@@ -84,7 +85,7 @@ button{background:none;border:0;cursor:pointer}
 </head>
 <body>
 <main>
- <div class="bar"><span id="net"></span><span><button id="bkBtn">备份/同步</button> · <button id="dimBtn">夜间模式</button></span></div>
+ <div class="bar"><span id="net"></span><button id="dimBtn">夜间模式</button></div>
  <button class="arm" id="arm">点此启用闹钟（iPhone 必须点一次才能发声）</button>
  <section class="clock">
   <div class="time" id="time">--:--<small id="sec"></small></div>
@@ -100,14 +101,13 @@ button{background:none;border:0;cursor:pointer}
   <div class="hl" id="hl"></div>
   <div class="hl">点一下日期，当天所有闹钟静音；再点一下取消。</div>
  </div>
-<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v5 · 含备份/同步</div>
+<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v6 · 云端英文语音</div>
 </main>
 
 <div class="sheet" id="sheet"><div class="card">
  <div class="row"><input type="time" id="fT"><select id="fS"><option value="chime">清晨钟声</option><option value="rise">渐强音阶</option><option value="beep">经典滴滴</option></select></div>
  <div class="row"><input type="text" id="fL" placeholder="备注（只能写英文，响铃时用英文朗读）" maxlength="60"></div>
  <div class="row"><span>分组</span><select id="fGr"></select></div>
- <div class="row"><span id="rS"></span><span><button class="mini" id="rBtn">● 录音</button><button class="mini" id="rImp">导入</button><input type="file" id="rFile" hidden><button class="mini" id="rPlay">▶</button><button class="mini" id="rDel">✕</button></span></div>
  <div class="chips" id="fD"></div>
  <div class="row"><span>语音播报备注</span><button class="sw" id="fV"></button></div>
  <select id="fG" hidden><option value="en">English</option></select>
@@ -124,15 +124,6 @@ button{background:none;border:0;cursor:pointer}
  <div class="btns"><button id="gCancel">取消</button><button class="p" id="gSave">保存</button></div>
 </div></div>
 
-<div class="sheet" id="bsheet"><div class="card">
- <div class="row"><b>备份 / 多设备同步</b></div>
- <div style="font-size:13px;color:var(--mu);line-height:1.5">在一台设备点「生成」再「复制」，把文字发到另一台设备（备忘录、微信、AirDrop 都行），在那边粘贴到下面的框里，点「导入」。</div>
- <textarea id="bT" rows="6" style="width:100%;margin-top:10px;background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:10px;padding:8px;font-size:12px"></textarea>
- <div class="row"><span>包含录音（文字会很长）</span><button class="sw" id="bR"></button></div>
- <div class="btns"><button id="bGen">生成</button><button id="bCopy">复制</button></div>
- <div class="btns"><button id="bClose">关闭</button><button class="p" id="bImp">导入（覆盖本机）</button></div>
- <div id="bS" style="font-size:13px;color:var(--mu);min-height:18px;margin-top:8px"></div>
-</div></div>
 <div class="toast" id="toast"></div>
 <div class="ring" id="ring">
  <div class="rt" id="rt"></div><div class="rl" id="rl"></div><div id="rdbg" style="font-size:13px;color:var(--mu);margin:-24px 0 24px"></div>
@@ -173,10 +164,25 @@ const SND={chime:t=>[523,659,784,1047,784,659].forEach((f,i)=>tone(f,t+i*.35,.9,
  beep:t=>{for(let i=0;i<4;i++)tone(1000,t+i*.25,.15,.35,'square')}};
 function dbg(t){const e=$('#rdbg');if(e)e.textContent=t}
 function say3(t,n,done,live){dbg('语音：准备播放…');if(!('speechSynthesis' in window)){toast('此浏览器不支持语音朗读');if(done)done();return}const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}let f=0,st=0;const end=()=>{if(!f){f=1;if(done)done()}};const go=useV=>{const v=useV?enVoice():null;for(let i=0;i<n;i++){const u=new SpeechSynthesisUtterance(txt);u.lang=v?v.lang:'en-US';if(v)u.voice=v;u.rate=.95;u.onstart=()=>{st=1;dbg('语音：正在播放（'+(v?v.name:'默认声音')+'）')};if(i==n-1){u.onend=end;u.onerror=ev=>{dbg('语音出错：'+((ev&&ev.error)||'未知'));if(!st&&useV&&!f&&(!live||ringing)&&!(ev&&/cancel|interrupt/.test(ev.error||''))){try{speechSynthesis.cancel()}catch(e){}go(0)}else end()}}speechSynthesis.speak(u)}};go(1);setTimeout(()=>{if(!st&&!f)dbg('语音没有响起');if(!st&&!f)toast('语音没有响起：请确认已点「启用闹钟」、手机没有静音、已下载英文语音')},4000);setTimeout(end,15000*n)}
+const SIL=silentWav();
+let cWd;
+function cloudStop(){clearTimeout(cWd);if(ka){ka.onended=ka.onerror=ka.onplaying=null;if(ka.src.indexOf('translate_tts')>0){ka.loop=true;ka.src=SIL;ka.play().catch(()=>{})}}}
+function cloudSay(txt,n,cb,live){
+ if(!ka){cb(false);return}
+ const url='https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q='+encodeURIComponent(txt);
+ let i=0,st=0,f=0;
+ const end=ok=>{if(f)return;f=1;clearTimeout(cWd);ka.onended=ka.onerror=ka.onplaying=null;ka.loop=true;ka.src=SIL;ka.play().catch(()=>{});cb(ok)};
+ const next=()=>{if(f)return;if(live&&!ringing)return end(true);if(i>=n)return end(true);i++;ka.loop=false;ka.src=url;ka.play().catch(()=>{if(!st)end(false)})};
+ ka.onplaying=()=>{if(ka.src.indexOf('translate_tts')>0){st=1;clearTimeout(cWd);dbg('语音：云端英文语音播放中')}};
+ ka.onended=()=>{if(ka.src.indexOf('translate_tts')>0)setTimeout(next,500)};
+ ka.onerror=()=>{end(st?true:false)};
+ cWd=setTimeout(()=>{if(!st)end(false)},7000);
+ next()}
+function speakNote(t,n,done,live){const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}
+ dbg('语音：准备播放…');
+ const fb=()=>{dbg('云端语音不可用，改用手机自带语音');say3(txt,n,done,live)};
+ if(navigator.onLine)cloudSay(txt,n,ok=>{if(ok){if(done)done()}else fb()},live);else fb()}
 function enVoice(){try{const v=speechSynthesis.getVoices().filter(x=>/^en[-_]/i.test(x.lang));const q=x=>(/premium/i.test(x.name)?4:/enhanced/i.test(x.name)?3:/siri/i.test(x.name)?2:0)*10+(/en[-_]SG/i.test(x.lang)?3:/en[-_]GB/i.test(x.lang)?2:/en[-_]US/i.test(x.lang)?1:0);return v.sort((a,b)=>q(b)-q(a))[0]}catch(e){}}
-let cs;const bufC=new Map();
-function dec(u){return bufC.has(u)?Promise.resolve(bufC.get(u)):new Promise((ok,no)=>{const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);ac.decodeAudioData(a.buffer,x=>{bufC.set(u,x);ok(x)},no)})}
-function playRec(u,n,done,live){unlock();dec(u).then(b=>{if(live&&!ringing){return}const t0=ac.currentTime+.05;cs=[];for(let i=0;i<n;i++){const s=ac.createBufferSource();s.buffer=b;s.connect(ac.destination);if(i==n-1)s.onended=()=>{if(done)done()};s.start(t0+i*(b.duration+.6));cs.push(s)}}).catch(()=>{if(done)done()})}
 function speak(txt,done,lang){if(!('speechSynthesis' in window)){done&&done();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(txt).replace(/[^\x00-\x7F]/g,''));u.lang='en-US';const v=enVoice();if(v){u.voice=v;u.lang=v.lang}u.rate=.95;let f=0;const e=()=>{if(!f){f=1;done&&done()}};u.onend=e;u.onerror=e;setTimeout(e,15000);speechSynthesis.speak(u)}
 async function wake(){try{if(navigator.wakeLock&&armed)wl=await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(armed){unlock();keepAlive()}tick()}});
@@ -188,11 +194,11 @@ let ringing=null,rtm,snoozes=[];
 const lg=()=>'en';
 function sayTime(d,g){if(g=='en'){const h=d.getHours()%12||12,m=d.getMinutes();return "It's "+h+(m?':'+p2(m):'')+(d.getHours()<12?' AM. ':' PM. ')}return '现在是'+d.getHours()+'点'+(d.getMinutes()?d.getMinutes()+'分':'整')+'。'}
 function cycle(){if(!ringing)return;unlock();const a=ringing,m=gm(a);if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600,300,600]);if(!m.snd)return;if(ac)SND[a.snd||'chime'](ac.currentTime+.05);
- rtm=setTimeout(()=>{if(ringing!==a)return;const fin=()=>{rtm=setTimeout(()=>{if(ringing===a)stopRing()},800)};if(a.say&&a.rec)playRec(a.rec,2,fin,1);else if(a.say&&a.label)say3(a.label,2,fin,1);else fin()},2800)}
+ rtm=setTimeout(()=>{if(ringing!==a)return;const fin=()=>{rtm=setTimeout(()=>{if(ringing===a)stopRing()},800)};if(a.say&&a.label)speakNote(a.label,2,fin,1);else fin()},2800)}
 function ring(a){if(ringing)return;const m=gm(a),lb=a.label||'闹钟时间到';
  if(!m.snd&&!m.pop){if(m.vib&&navigator.vibrate)navigator.vibrate([600,300,600]);toast(lb+' · '+a.t);return}
- if(!armed)toast('请先点「启用闹钟」，否则 iPhone 可能不发声');else if(m.snd&&a.say&&!a.rec&&!a.label)toast('这个闹钟没有英文备注，所以没有语音');ringing=a;$('#rl').textContent=lb;$('#okBtn').style.display=m.snd?'none':'';if(m.pop)$('#ring').classList.add('show');else toast(lb+' · '+a.t);if(!m.snd)rtm=setTimeout(stopRing,600000);cycle()}
-function stopRing(){ringing=null;clearTimeout(rtm);try{(cs||[]).forEach(x=>{try{x.stop()}catch(e){}})}catch(e){}try{speechSynthesis.cancel()}catch(e){}$('#ring').classList.remove('show')}
+ if(!armed)toast('请先点「启用闹钟」，否则 iPhone 可能不发声');else if(m.snd&&a.say&&!a.label)toast('这个闹钟没有英文备注，所以没有语音');ringing=a;$('#rl').textContent=lb;$('#okBtn').style.display=m.snd?'none':'';if(m.pop)$('#ring').classList.add('show');else toast(lb+' · '+a.t);if(!m.snd)rtm=setTimeout(stopRing,600000);cycle()}
+function stopRing(){ringing=null;clearTimeout(rtm);cloudStop();try{speechSynthesis.cancel()}catch(e){}$('#ring').classList.remove('show')}
 
 $('#okBtn').onclick=stopRing;
 $('#snzBtn').onclick=()=>{const a=ringing;stopRing();snoozes.push({ts:Date.now()+300000,a})};
@@ -221,7 +227,7 @@ addEventListener('online',net);addEventListener('offline',net);net();
 /* ---- 闹钟列表 ---- */
 function row(a){const r=document.createElement('div');r.className='al'+(a.on&&gOn(a)?'':' off');
  r.innerHTML='<div class="m"><div class="t">'+a.t+'</div><div class="d"></div></div><button class="sw'+(a.on?' on':'')+'" aria-label="Toggle"></button>';
- r.querySelector('.d').textContent=repText(a)+(a.label?' · '+a.label:'')+(a.rec?' · 🎙':a.say?' · 🔊':'');
+ r.querySelector('.d').textContent=repText(a)+(a.label?' · '+a.label:'')+(a.say?' · 🔊':'');
  r.querySelector('.m').onclick=()=>edit(a);
  r.querySelector('.sw').onclick=()=>{a.on=!a.on;save();render();tick()};return r}
 function render(){const L=$('#list');L.innerHTML='';
@@ -233,16 +239,9 @@ function render(){const L=$('#list');L.innerHTML='';
  if(!alarms.length&&!groups.length)L.innerHTML='<div class="empty">还没有闹钟，点下面新建一个</div>'}
 let cur=null,cd=[],cv=true;
 function chips(){const c=$('#fD');c.innerHTML='';[...WD].forEach((w,i)=>{const b=document.createElement('button');b.textContent=w;b.className=cd.includes(i)?'on':'';b.onclick=()=>{cd=cd.includes(i)?cd.filter(x=>x!=i):[...cd,i].sort();chips()};c.appendChild(b)})}
-function edit(a){cur=a;const n=a||{t:'07:00',label:'',days:[1,2,3,4,5],say:true,snd:'chime'};$('#fT').value=n.t;$('#fL').value=n.label;$('#fS').value=n.snd||'chime';$('#fG').value=n.lang||'en';$('#fGr').innerHTML='<option value="">未分组</option>'+groups.map(g=>'<option value="'+g.id+'">'+g.name.replace(/</g,'&lt;')+'</option>').join('');$('#fGr').value=n.g||'';cRec=n.rec||null;recUI();cd=n.days.slice();cv=n.say;$('#fV').className='sw'+(cv?' on':'');chips();$('#delBtn').style.display=a?'':'none';$('#sheet').classList.add('show')}
-let bR=0;
-$('#bkBtn').onclick=()=>{$('#bT').value='';$('#bS').textContent='';$('#bsheet').classList.add('show')};
-$('#bClose').onclick=()=>$('#bsheet').classList.remove('show');
-$('#bR').onclick=()=>{bR=!bR;$('#bR').className='sw'+(bR?' on':'')};
-$('#bGen').onclick=()=>{const d={v:1,alarms:alarms.map(a=>{const c={...a};if(!bR)delete c.rec;return c}),groups,muted};$('#bT').value='ALARMv1:'+btoa(unescape(encodeURIComponent(JSON.stringify(d))));$('#bS').textContent='已生成，请点「复制」'};
-$('#bCopy').onclick=async()=>{const t=$('#bT');if(!t.value){$('#bS').textContent='请先点「生成」';return}try{await navigator.clipboard.writeText(t.value);$('#bS').textContent='已复制 ✓'}catch(e){t.select();t.setSelectionRange(0,1e9);try{document.execCommand('copy');$('#bS').textContent='已复制 ✓'}catch(e2){$('#bS').textContent='请长按文字框，手动全选并复制'}}};
-$('#bImp').onclick=()=>{try{const x=$('#bT').value.trim();if(x.indexOf('ALARMv1:')!=0)throw 0;const d=JSON.parse(decodeURIComponent(escape(atob(x.slice(8)))));if(!Array.isArray(d.alarms))throw 0;alarms=d.alarms;groups=d.groups||[];muted=d.muted||[];save();saveG();store.set('muted',muted);render();cal();$('#next').textContent='';tick();$('#bS').textContent='导入成功 ✓（已覆盖本机）'}catch(e){$('#bS').textContent='导入失败：文字不完整或格式不对'}};
+function edit(a){cur=a;const n=a||{t:'07:00',label:'',days:[1,2,3,4,5],say:true,snd:'chime'};$('#fT').value=n.t;$('#fL').value=n.label;$('#fS').value=n.snd||'chime';$('#fG').value=n.lang||'en';$('#fGr').innerHTML='<option value="">未分组</option>'+groups.map(g=>'<option value="'+g.id+'">'+g.name.replace(/</g,'&lt;')+'</option>').join('');$('#fGr').value=n.g||'';cd=n.days.slice();cv=n.say;$('#fV').className='sw'+(cv?' on':'');chips();$('#delBtn').style.display=a?'':'none';$('#sheet').classList.add('show')}
 $('#addBtn').onclick=()=>edit(null);
-let cg=null,gS=1,gV=1,gP=1,mr,chunks=[],cRec=null,recT;
+let cg=null,gS=1,gV=1,gP=1;
 function gsw(){$('#gSn').className='sw'+(gS?' on':'');$('#gVb').className='sw'+(gV?' on':'');$('#gPp').className='sw'+(gP?' on':'')}
 $('#gSn').onclick=()=>{gS=!gS;gsw()};$('#gVb').onclick=()=>{gV=!gV;gsw()};$('#gPp').onclick=()=>{gP=!gP;gsw()};
 function gedit(g){cg=g;gS=g?g.snd!==false:true;gV=g?g.vib!==false:true;gP=g?g.pop!==false:true;gsw();$('#gN').value=g?g.name:'';$('#gDel').style.display=g?'':'none';$('#gsheet').classList.add('show')}
@@ -250,21 +249,10 @@ $('#addGBtn').onclick=()=>gedit(null);
 $('#gCancel').onclick=()=>$('#gsheet').classList.remove('show');
 $('#gSave').onclick=()=>{const n=$('#gN').value.trim();if(!n)return;const o={snd:!!gS,vib:!!gV,pop:!!gP};if(cg){cg.name=n;Object.assign(cg,o)}else groups.push({id:Date.now(),name:n,on:true,...o});saveG();render();tick();$('#gsheet').classList.remove('show')};
 $('#gDel').onclick=()=>{alarms.forEach(a=>{if(a.g==cg.id)a.g=null});groups=groups.filter(x=>x!==cg);save();saveG();render();tick();$('#gsheet').classList.remove('show')};
-function recUI(){$('#rS').textContent=cRec?'已录制你的声音 ✓':'用自己的声音（可选）';$('#rDel').style.display=cRec?'':'none';$('#rPlay').style.display=cRec?'':'none'}
-$('#rImp').onclick=()=>$('#rFile').click();
-$('#rFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(f.size>1500000){$('#rS').textContent='文件太大（请小于 1.5 MB，约 1 分钟内）';return}const fr=new FileReader();fr.onload=()=>{const u=fr.result;unlock();dec(u).then(()=>{cRec=u;recUI()}).catch(()=>{$('#rS').textContent='无法识别这个文件（请选 m4a、mp3、wav 等音频）'})};fr.readAsDataURL(f)};
-$('#rDel').onclick=()=>{cRec=null;recUI()};
-$('#rPlay').onclick=()=>{unlock();if(cRec)playRec(cRec,1)};
-$('#rBtn').onclick=async()=>{if(mr&&mr.state=='recording'){mr.stop();return}
- try{const st=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];const mt=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'';mr=mt?new MediaRecorder(st,{mimeType:mt}):new MediaRecorder(st);
-  mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-  mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearTimeout(recT);$('#rBtn').textContent='● 录音';const fr=new FileReader();fr.onload=()=>{cRec=fr.result;recUI()};fr.readAsDataURL(new Blob(chunks,{type:mr.mimeType}))};
-  mr.start();$('#rBtn').textContent='■ 停止';$('#rS').textContent='录音中…（最长 15 秒）';recT=setTimeout(()=>{if(mr.state=='recording')mr.stop()},15000)}
- catch(e){$('#rS').textContent='此页面无法使用麦克风，请点「导入」选录音文件'}};
 $('#cancelBtn').onclick=()=>$('#sheet').classList.remove('show');
 $('#fV').onclick=()=>{cv=!cv;$('#fV').className='sw'+(cv?' on':'')};
-$('#tryBtn').onclick=()=>{unlock();if(ac)SND[$('#fS').value](ac.currentTime+.05);if(cv&&(cRec||$('#fL').value))setTimeout(()=>cRec?playRec(cRec,2):say3($('#fL').value,2),2600)};
-$('#saveBtn').onclick=()=>{const o={t:$('#fT').value||'07:00',label:$('#fL').value.replace(/[^\x00-\x7F]/g,'').trim(),days:cd,say:cv,snd:$('#fS').value,lang:$('#fG').value,g:$('#fGr').value?+$('#fGr').value:null,rec:cRec,on:true};
+$('#tryBtn').onclick=()=>{unlock();if(ac)SND[$('#fS').value](ac.currentTime+.05);if(cv&&$('#fL').value){keepAlive();setTimeout(()=>speakNote($('#fL').value,2),2600)}};
+$('#saveBtn').onclick=()=>{const o={t:$('#fT').value||'07:00',label:$('#fL').value.replace(/[^\x00-\x7F]/g,'').trim(),days:cd,say:cv,snd:$('#fS').value,lang:$('#fG').value,g:$('#fGr').value?+$('#fGr').value:null,on:true};
  if(cur)Object.assign(cur,o);else alarms.push({id:Date.now(),...o});save();render();tick();$('#sheet').classList.remove('show')};
 $('#delBtn').onclick=()=>{alarms=alarms.filter(x=>x!==cur);save();render();tick();$('#sheet').classList.remove('show')};
 
