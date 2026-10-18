@@ -102,7 +102,7 @@ button{background:none;border:0;cursor:pointer}
   <div class="hl">点一下日期，当天所有闹钟静音；再点一下取消。</div>
  </div>
 <details style="margin-top:24px;font-size:12px;color:var(--mu)"><summary>运行记录（排查用）</summary><pre id="logbox" style="white-space:pre-wrap;margin:8px 0 0"></pre></details>
-<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v7 · 含运行记录</div>
+<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v8 · 手机语音优先</div>
 </main>
 
 <div class="sheet" id="sheet"><div class="card">
@@ -174,7 +174,15 @@ function playTone(kind){let via='ac';try{unlock();if(!(ac&&ac.state==='running')
  if(via==='el'){if(ka){try{ka.loop=false;ka.src=mkWav(kind);ka.onended=()=>{ka.onended=null;ka.loop=true;ka.src=SIL;ka.play().catch(()=>{})};ka.play().catch(e=>lg2('铃声播放被拒绝：'+e.name))}catch(e){lg2('铃声出错')}}else lg2('铃声：没有可用的播放器（未点启用闹钟？）')}
  lg2('铃声方式：'+(via=='ac'?'音频引擎':'播放器')+'（ac='+(ac?ac.state:'无')+'）')}
 function dbg(t){const e=$('#rdbg');if(e)e.textContent=t;lg2(t)}
-function say3(t,n,done,live){dbg('语音：准备播放…');if(!('speechSynthesis' in window)){toast('此浏览器不支持语音朗读');if(done)done();return}const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}let f=0,st=0;const end=()=>{if(!f){f=1;if(done)done()}};const go=useV=>{const v=useV?enVoice():null;for(let i=0;i<n;i++){const u=new SpeechSynthesisUtterance(txt);u.lang=v?v.lang:'en-US';if(v)u.voice=v;u.rate=.95;u.onstart=()=>{st=1;dbg('语音：正在播放（'+(v?v.name:'默认声音')+'）')};if(i==n-1){u.onend=end;u.onerror=ev=>{dbg('语音出错：'+((ev&&ev.error)||'未知'));if(!st&&useV&&!f&&(!live||ringing)&&!(ev&&/cancel|interrupt/.test(ev.error||''))){try{speechSynthesis.cancel()}catch(e){}go(0)}else end()}}speechSynthesis.speak(u)}};go(1);setTimeout(()=>{if(!st&&!f)dbg('语音没有响起');if(!st&&!f)toast('语音没有响起：请确认已点「启用闹钟」、手机没有静音、已下载英文语音')},4000);setTimeout(end,15000*n)}
+function say3(t,n,done,live,fail,noV){
+ if(!('speechSynthesis' in window)){if(fail)fail();else if(done)done();return}
+ const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}
+ try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}
+ const v=noV?null:enVoice();let i=0,st=0,f=0,w;
+ const finish=ok=>{if(f)return;f=1;clearTimeout(w);if(ok){if(done)done();return}try{speechSynthesis.cancel()}catch(e){}if(!noV&&v&&(!live||ringing)){say3(t,n,done,live,fail,1)}else if(fail)fail();else if(done)done()};
+ w=setTimeout(()=>{if(!st)finish(false)},4000);
+ const one=()=>{if(f)return;if(live&&!ringing)return finish(true);if(i>=n)return finish(true);i++;const u=new SpeechSynthesisUtterance(txt);u.lang=v?v.lang:'en-US';if(v)u.voice=v;u.rate=.95;u.onstart=()=>{if(!st)dbg('\u8bed\u97f3\uff1a\u624b\u673a\u8bed\u97f3\u64ad\u653e\u4e2d\uff08'+(v?v.name:'\u9ed8\u8ba4\u58f0\u97f3')+'\uff09');st=1};u.onend=()=>one();u.onerror=ev=>{if(!st)finish(false);else one()};speechSynthesis.speak(u)};
+ one()}
 const SIL=silentWav();
 let cWd;
 function cloudStop(){clearTimeout(cWd);if(ka){ka.onended=ka.onerror=ka.onplaying=null;if(ka.src.indexOf('translate_tts')>0){ka.loop=true;ka.src=SIL;ka.play().catch(()=>{})}}}
@@ -190,9 +198,8 @@ function cloudSay(txt,n,cb,live){
  cWd=setTimeout(()=>{if(!st)end(false)},7000);
  next()}
 function speakNote(t,n,done,live){const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}
- dbg('语音：准备播放…');
- const fb=()=>{dbg('云端语音不可用，改用手机自带语音');say3(txt,n,done,live)};
- if(navigator.onLine)cloudSay(txt,n,ok=>{if(ok){if(done)done()}else fb()},live);else fb()}
+ dbg('\u8bed\u97f3\uff1a\u51c6\u5907\u64ad\u653e\u2026');
+ say3(txt,n,done,live,()=>{dbg('\u624b\u673a\u8bed\u97f3\u6ca1\u54cd\uff0c\u6539\u7528\u4e91\u7aef\u8bed\u97f3');if(navigator.onLine)cloudSay(txt,n,()=>{if(done)done()},live);else if(done)done()})}
 function enVoice(){try{const v=speechSynthesis.getVoices().filter(x=>/^en[-_]/i.test(x.lang));const q=x=>(/premium/i.test(x.name)?4:/enhanced/i.test(x.name)?3:/siri/i.test(x.name)?2:0)*10+(/en[-_]SG/i.test(x.lang)?3:/en[-_]GB/i.test(x.lang)?2:/en[-_]US/i.test(x.lang)?1:0);return v.sort((a,b)=>q(b)-q(a))[0]}catch(e){}}
 function speak(txt,done,lang){if(!('speechSynthesis' in window)){done&&done();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(txt).replace(/[^\x00-\x7F]/g,''));u.lang='en-US';const v=enVoice();if(v){u.voice=v;u.lang=v.lang}u.rate=.95;let f=0;const e=()=>{if(!f){f=1;done&&done()}};u.onend=e;u.onerror=e;setTimeout(e,15000);speechSynthesis.speak(u)}
 async function wake(){try{if(navigator.wakeLock&&armed)wl=await navigator.wakeLock.request('screen')}catch(e){}}
