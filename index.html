@@ -54,7 +54,7 @@ button{background:none;border:0;cursor:pointer}
 .c.t{background:var(--am)}.c.t .n,.c.t .s{color:#1a1405}
 .c.we .n,.c.ph .n{color:var(--rd)}
 .c.t .n,.c.t .s{color:#1a1405}
-.c{position:relative;cursor:pointer}.c.mu{background:var(--ln)}.c.mu::after{content:"🔇";position:absolute;top:1px;right:2px;font-size:10px}.gm{font-size:12px;color:var(--mu);font-weight:400;margin-top:2px}.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--sf);border:1px solid var(--ln);padding:10px 16px;border-radius:12px;z-index:8;display:none;max-width:90%;font-size:14px}
+.c{position:relative;cursor:pointer}.c.mu{background:var(--ln)}.c.mu::after{content:"🔇";position:absolute;top:1px;right:2px;font-size:10px}.gm{font-size:12px;color:var(--mu);font-weight:400;margin-top:2px}.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--sf);border:1px solid var(--ln);padding:10px 16px;border-radius:12px;z-index:20;display:none;max-width:90%;font-size:14px}
 .gh{display:flex;align-items:center;gap:10px;padding:18px 4px 4px;font-size:14px}.gn{flex:1;font-weight:600}.gx{color:var(--am);font-size:14px;padding:4px 8px}.gh .sw{width:42px;height:26px}.gh .sw::after{width:20px;height:20px}.gh .sw.on::after{transform:translateX(16px)}.mini{padding:7px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--ln);font-size:14px;margin-left:4px}.adds{display:flex;gap:10px}.row select{max-width:60%}
 .hl{margin-top:14px;font-size:14px;color:var(--mu);line-height:1.6}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:5}
@@ -100,7 +100,7 @@ button{background:none;border:0;cursor:pointer}
   <div class="hl" id="hl"></div>
   <div class="hl">点一下日期，当天所有闹钟静音；再点一下取消。</div>
  </div>
-<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v4 · 含备份/同步</div>
+<div style="text-align:center;font-size:12px;color:var(--mu);margin-top:28px">版本 v5 · 含备份/同步</div>
 </main>
 
 <div class="sheet" id="sheet"><div class="card">
@@ -135,7 +135,7 @@ button{background:none;border:0;cursor:pointer}
 </div></div>
 <div class="toast" id="toast"></div>
 <div class="ring" id="ring">
- <div class="rt" id="rt"></div><div class="rl" id="rl"></div>
+ <div class="rt" id="rt"></div><div class="rl" id="rl"></div><div id="rdbg" style="font-size:13px;color:var(--mu);margin:-24px 0 24px"></div>
  <button class="stop" id="okBtn" style="display:none">知道了</button><button class="snz" id="snzBtn">稍后提醒（5 分钟）</button>
 </div>
 
@@ -171,7 +171,8 @@ function tone(f,t,dur,v,ty){const o=ac.createOscillator(),g=ac.createGain();o.ty
 const SND={chime:t=>[523,659,784,1047,784,659].forEach((f,i)=>tone(f,t+i*.35,.9,.4)),
  rise:t=>[392,440,494,523,587,659,698,784].forEach((f,i)=>tone(f,t+i*.3,.5,.15+i*.05,'triangle')),
  beep:t=>{for(let i=0;i<4;i++)tone(1000,t+i*.25,.15,.35,'square')}};
-function say3(t,n,done,live){if(!('speechSynthesis' in window)){toast('此浏览器不支持语音朗读');if(done)done();return}const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}let f=0,st=0;const end=()=>{if(!f){f=1;if(done)done()}};const go=useV=>{const v=useV?enVoice():null;for(let i=0;i<n;i++){const u=new SpeechSynthesisUtterance(txt);u.lang=v?v.lang:'en-US';if(v)u.voice=v;u.rate=.95;u.onstart=()=>{st=1};if(i==n-1){u.onend=end;u.onerror=ev=>{if(!st&&useV&&!f&&(!live||ringing)&&!(ev&&/cancel|interrupt/.test(ev.error||''))){try{speechSynthesis.cancel()}catch(e){}go(0)}else end()}}speechSynthesis.speak(u)}};go(1);setTimeout(()=>{if(!st&&!f)toast('语音没有响起：请确认已点「启用闹钟」、手机没有静音、已下载英文语音')},4000);setTimeout(end,15000*n)}
+function dbg(t){const e=$('#rdbg');if(e)e.textContent=t}
+function say3(t,n,done,live){dbg('语音：准备播放…');if(!('speechSynthesis' in window)){toast('此浏览器不支持语音朗读');if(done)done();return}const txt=String(t).replace(/[^\x00-\x7F]/g,'').trim();if(!txt){if(done)done();return}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}let f=0,st=0;const end=()=>{if(!f){f=1;if(done)done()}};const go=useV=>{const v=useV?enVoice():null;for(let i=0;i<n;i++){const u=new SpeechSynthesisUtterance(txt);u.lang=v?v.lang:'en-US';if(v)u.voice=v;u.rate=.95;u.onstart=()=>{st=1;dbg('语音：正在播放（'+(v?v.name:'默认声音')+'）')};if(i==n-1){u.onend=end;u.onerror=ev=>{dbg('语音出错：'+((ev&&ev.error)||'未知'));if(!st&&useV&&!f&&(!live||ringing)&&!(ev&&/cancel|interrupt/.test(ev.error||''))){try{speechSynthesis.cancel()}catch(e){}go(0)}else end()}}speechSynthesis.speak(u)}};go(1);setTimeout(()=>{if(!st&&!f)dbg('语音没有响起');if(!st&&!f)toast('语音没有响起：请确认已点「启用闹钟」、手机没有静音、已下载英文语音')},4000);setTimeout(end,15000*n)}
 function enVoice(){try{const v=speechSynthesis.getVoices().filter(x=>/^en[-_]/i.test(x.lang));const q=x=>(/premium/i.test(x.name)?4:/enhanced/i.test(x.name)?3:/siri/i.test(x.name)?2:0)*10+(/en[-_]SG/i.test(x.lang)?3:/en[-_]GB/i.test(x.lang)?2:/en[-_]US/i.test(x.lang)?1:0);return v.sort((a,b)=>q(b)-q(a))[0]}catch(e){}}
 let cs;const bufC=new Map();
 function dec(u){return bufC.has(u)?Promise.resolve(bufC.get(u)):new Promise((ok,no)=>{const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);ac.decodeAudioData(a.buffer,x=>{bufC.set(u,x);ok(x)},no)})}
